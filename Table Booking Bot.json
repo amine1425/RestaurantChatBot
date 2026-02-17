@@ -1,0 +1,258 @@
+{
+  "name": "Table Booking Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "initialMessages": "Hi there! Welcome to Daily Bean.\n\nI can help you book a table. Tell me your name, the date, the time, and how many people will join you.\n\nSend it in any order you like, and I’ll check availability right away.\n\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d5200808-f00c-4fe3-b02a-af5210579c6c",
+      "name": "When chat message received",
+      "webhookId": "a5950202-4e36-4910-be43-3225da7b367c"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are a restaurant booking agent that helps customers book tables.\n\nYour workflow:\n1. When a customer requests a booking, extract: name, date, time, and number of people\n2. Use Read Booking Tool to check existing bookings\n3. Check if the requested date and time already has a booking\n4. If there is a conflict (same date AND time):\n   - DO NOT add the booking\n   - Inform the customer that the time slot is already taken\n   - Ask them to choose another time slot\n5. If there is NO conflict:\n   - Use Add Booking Tool to add the booking\n   - Confirm the booking to the customer\n\nIMPORTANT: NEVER cancel or overwrite existing bookings. If a time slot is taken, politely inform the customer and ask them to select a different time.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "7890bc63-79d0-4de2-acb9-d7c6c9f7fec9",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        80,
+        208
+      ],
+      "id": "b316610a-946b-4404-ba62-8a7789ac671a",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "4FKHbbq2hhDHLzxU",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        224,
+        208
+      ],
+      "id": "744f54f6-0584-4d78-b42e-0724c4409c9d",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this tool to add a new booking to the Google Sheet. Only use this after checking availability with the Read Bookings Tool. The sheet has columns: Name, Date, Time, number of People.",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1S9BzBACFDvRXduwdqvwFtW6GIz6JyfeIF8Z2C2bnoos",
+          "mode": "list",
+          "cachedResultName": "books_n8n",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1S9BzBACFDvRXduwdqvwFtW6GIz6JyfeIF8Z2C2bnoos/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1S9BzBACFDvRXduwdqvwFtW6GIz6JyfeIF8Z2C2bnoos/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "name ": "={{ $fromAI('name', 'Customer full name') }}",
+            "date ": "={{ $fromAI('date', 'Booking date') }}",
+            "time": "={{ $fromAI('time', 'Booking time') }}",
+            "number of people ": "={{ $fromAI('people', 'Number of guests', 'number') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "name ",
+              "displayName": "name ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "date ",
+              "displayName": "date ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "time",
+              "displayName": "time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "number of people ",
+              "displayName": "number of people ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        368,
+        208
+      ],
+      "id": "b5ad695f-9664-4fea-b295-53fb79c03189",
+      "name": "add bookings",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "bTW1gZiRbVGbBJRD",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this tool to read all existing bookings from the Google Sheet. The sheet has columns: Name, Date, Time, People. Check this before creating a new booking to avoid double bookings.\n",
+        "documentId": {
+          "__rl": true,
+          "value": "1S9BzBACFDvRXduwdqvwFtW6GIz6JyfeIF8Z2C2bnoos",
+          "mode": "list",
+          "cachedResultName": "books_n8n",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1S9BzBACFDvRXduwdqvwFtW6GIz6JyfeIF8Z2C2bnoos/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1S9BzBACFDvRXduwdqvwFtW6GIz6JyfeIF8Z2C2bnoos/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        464,
+        304
+      ],
+      "id": "dd40ed78-a4ad-4fdc-901a-af1ceef81fa1",
+      "name": "read bookings tool",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "bTW1gZiRbVGbBJRD",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "add bookings": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "read bookings tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "e5c79bf4-6532-49eb-98a5-b9793ee50e22",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d6c59c9ab934f7c37765f3f3f204b320b9670249918971a9f5b75e2ef790df66"
+  },
+  "id": "NAoSl7UJRFmdpyxg",
+  "tags": []
+}
